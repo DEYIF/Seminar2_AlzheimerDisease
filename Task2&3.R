@@ -1,0 +1,1 @@
+data <- read.csv("data_task2.csv")
