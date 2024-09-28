@@ -1,7 +1,9 @@
 # Task2
 data <- read.csv("data_task2.csv")
+pre_data <- data.frame(age=seq(55,110,by = 1))
 library(ggplot2)
 library(dplyr)  #for using group_by()
+library(lme4) #to use mixed-effect model
 # scatter plot
 ggplot(data, aes(x = age, y = DV_amyloid)) +
   geom_point() +
@@ -20,31 +22,92 @@ ggplot(average_amyloid,(aes(x = age, y = mean_amyloid))) +
 
 # construct linear model
 attach(average_amyloid)
-lm.linear <- lm(mean_amyloid ~ age)
+model_linear <- lm(mean_amyloid ~ age)
 detach(average_amyloid)
-summary(lm.linear)
-# coefficients(lm.linear)
+summary(model_linear)
+# coefficients(model_linear)
 
 # plot prediction
-attach(average_amyloid)
-plot(age,mean_amyloid)#绘制散点图
-abline(lm.linear)#添加拟合直线
-par(mfrow=c(2,2))
-plot(lm.linear)#绘制回归曲线的图
-detach(average_amyloid)
 
-# construct logistic model
-attach(average_amyloid)
-lm.log <- lm(mean_amyloid ~ age + I(age^2))
-detach(average_amyloid)
-summary(lm.log)
-# coefficients(lm.log)
-
-# plot prediction
-attach(average_amyloid)
+attach(data)
 par(mfrow=c(1,1))
-plot(age,mean_amyloid)#绘制散点图
-lines(age,fitted(lm.log),col="blue")
+plot(age,DV_amyloid)#绘制散点图
+abline(model_linear,col="blue",lwd = 2)#添加拟合直线
 par(mfrow=c(2,2))
-plot(lm.log)#绘制回归曲线的图
+plot(model_linear)#绘制回归曲线的图
+detach(data)
+
+
+# construct logarithmic model
+attach(average_amyloid)
+model_log <- lm(mean_amyloid ~ log(age))
 detach(average_amyloid)
+summary(model_log)
+# coefficients(model_log)
+
+# 绘制预测散点图和拟合曲线
+# 不需要 attach 和 detach
+par(mfrow=c(1,1))  # 单图模式
+# 绘制原始数据的散点图
+plot(average_amyloid$age, average_amyloid$mean_amyloid, 
+     main = "回归模型与原始数据对比", 
+     xlab = "Age", 
+     ylab = "Mean Amyloid",
+     pch = 19)
+# 绘制回归拟合曲线
+lines(average_amyloid$age, fitted(model_log), col = "blue", lwd = 2)
+# 绘制回归诊断图
+par(mfrow=c(2,2))  # 切换到 2x2 图模式
+plot(model_log)  # R 会自动生成 4 个诊断图
+
+
+# construct polynomial model(2)
+attach(average_amyloid)
+model_poly2 <- lm(mean_amyloid ~ poly(age,2))
+detach(average_amyloid)
+summary(model_poly2)
+# coefficients(model_poly2)
+
+# plot prediction
+par(mfrow=c(1,1))
+plot(average_amyloid$age, average_amyloid$mean_amyloid, 
+     main = "二次多项式回归拟合",
+     xlab = "Age", ylab = "Mean Amyloid", pch = 19)
+lines(average_amyloid$age, fitted(model_poly2),col="blue",lwd = 2)
+par(mfrow=c(2,2))
+plot(model_poly2)#绘制回归曲线的图
+
+
+# construct mixed-effect model
+
+
+
+## predict age from 75 to 110
+pre_data$amy_linear <- predict(model_linear, newdata=pre_data)
+pre_data$amy_log <- predict(model_log, newdata=pre_data)
+pre_data$amy_poly2 <- predict(model_poly2, newdata=pre_data)
+# 1. 绘制 data 数据的散点图 (age 从 55 到 74)
+par(mfrow=c(1,1))
+plot(data$age, data$DV_amyloid, 
+     main = "DV_amyloid 和模型预测对比图", 
+     xlab = "Age", 
+     ylab = "DV_amyloid", 
+     pch = 19, 
+     col = "darkblue", 
+     xlim = c(55, 110),  # 设置 X 轴范围覆盖两个数据集
+     ylim = c(50,300))
+
+# 2. 添加 pre_data 中线性模型的预测曲线 (age 从 75 到 110)
+lines(pre_data$age, pre_data$amy_linear, col = "red", lwd = 2)
+
+# 3. 添加 pre_data 中对数模型的预测曲线
+lines(pre_data$age, pre_data$amy_log, col = "blue", lwd = 2)
+
+# 4. 添加 pre_data 中二次多项式模型的预测曲线
+lines(pre_data$age, pre_data$amy_poly2, col = "green", lwd = 2)
+
+# 5. 添加图例
+legend("topleft", legend = c("原始数据", "线性模型", "对数模型", "二次多项式模型"), 
+       col = c("darkblue", "red", "blue", "green"), 
+       pch = c(19, NA, NA, NA), 
+       lwd = c(NA, 2, 2, 2))
