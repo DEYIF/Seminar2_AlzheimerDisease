@@ -1,6 +1,7 @@
 # Task2
 data <- read.csv("data_task2.csv")
 pre_data <- data.frame(age=seq(55,110,by = 1))
+reg_data <- data.frame(age=seq(55,74,by = 1))
 library(ggplot2)
 library(dplyr)  #for using group_by()
 library(lme4) #to use mixed-effect model
@@ -79,6 +80,24 @@ plot(model_poly2)#绘制回归曲线的图
 
 
 # construct mixed-effect model
+# 创建新的分组变量 Y
+data$Y <- floor(data$X / 17)
+# 使用lmer函数构建模型，age为固定效应，Y为随机效应
+model_mixed <- lmer(DV_amyloid ~ age + (1|Y), data = data)
+
+# 输出模型摘要，查看固定效应和随机效应的结果
+summary(model_mixed)
+# plot prediction
+set.seed(123)  # 为了可重复性，设置随机种子
+reg_data$Y <- sample(data$Y, 20, replace = TRUE)  # 随机选择 20 个值，允许重复
+reg_data$mix_amyloid <- predict(model_mixed, newdata=reg_data)
+par(mfrow=c(1,1))
+plot(data$age, data$DV_amyloid, 
+     main = "mixed effect",
+     xlab = "Age", ylab = "Amyloid", pch = 19, col = rgb(0.1,0.7,0.6,0.5))
+
+lines(average_amyloid$age, reg_data$mix_amyloid,col="blue",lwd = 2)
+
 
 
 
