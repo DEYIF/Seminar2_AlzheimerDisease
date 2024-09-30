@@ -13,7 +13,6 @@ average_amyloid <- data_2 %>%
   group_by(age) %>%
   summarize(mean_amyloid = mean(DV_amyloid, na.rm = TRUE))
 # 查看结果
-# print(average_amyloid)
 ggplot(average_amyloid,(aes(x = age, y = mean_amyloid))) +
    geom_point(pch = 19, col = rgb(0.15,0.6,0.96,0.6)) +
    labs(title = "mean DV Amyloid vs Age", x = "Age", y = "mean DV Amyloid") +
@@ -206,5 +205,49 @@ ggplot() +
   theme_minimal()
 
 
-# improve:
+# improved model
+# construct polynomial model(3)
+model_poly3 <- lm(mean_amyloid ~ poly(age,3), data = average_amyloid)
+summary(model_poly3)
+
+# plot prediction
+new_data$predicted_poly3_Amyloid <- predict(model_poly3, newdata = new_data)
+ggplot() +
+  geom_point(data = data_2, aes(x= age, y=DV_amyloid), color = rgb(0.15, 0.6, 0.96, 0.6), size = 2) +  # 绘制散点
+  geom_line(data = new_data,aes(x = age, y = predicted_poly3_Amyloid), color = "red", size = 1.2) +  # 添加线性回归直线
+  labs(title = "polynomial3 Fit vs. Age", 
+       x = "Age", 
+       y = "Mean DV Amyloid") +
+  theme_minimal()
+# 残差 vs 拟合值
+ggplot(average_amyloid, aes(x = fitted(model_poly3), y = residuals(model_poly3))) +
+  geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "polynomial model(3) Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+# 正态 Q-Q 图
+ggplot(data.frame(residuals = residuals(model_poly3)), aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red", size = 1.2) +
+  labs(title = "polynomial model(3) Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
+  theme_minimal()
+# Shapiro-Wilk test
+shpiro_result <- shapiro.test(residuals(model_poly3))
+print(shpiro_result)
+
+# predict age from 75 to 110
+pre_data <- data.frame(age=seq(75,110,by = 1))
+pre_data$amy_poly3 <- predict(model_poly3, newdata=pre_data)
+ggplot() +
+  geom_point(data = data_3, aes(x = age, y = DV_amyloid, color = "Ground Truth"), size = 2) +  # 绘制散点
+  geom_point(data = pre_data, aes(x = age, y = amy_poly3, color = "Polynomial 3"), size = 2) +  # 添加多项式拟合
+  labs(title = "Polynomial 3 Fit vs. Age", 
+       x = "Age", 
+       y = "Mean DV Amyloid") +
+  scale_color_manual(values = c("Polynomial 3" = rgb(0.9, 0.2, 0.2, 0.6),
+                                "Ground Truth" = rgb(0.15, 0.6, 0.96, 0.6))) +
+  theme_minimal()
+
+
+
 
