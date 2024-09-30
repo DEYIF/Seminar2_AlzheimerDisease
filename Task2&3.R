@@ -1,11 +1,8 @@
 # Task2
-data_2 <- read.csv("data_task2.csv")
-# pre_data <- data.frame(age=seq(55,110,by = 1))
-reg_data <- data.frame(age=seq(55,74,by = 1))
 library(ggplot2)
 library(dplyr)  #for using group_by()
 library(lme4) #to use mixed-effect model
-
+data_2 <- read.csv("data_task2.csv")
 # scatter plot
 ggplot(data_2, aes(x = age, y = DV_amyloid)) +
   geom_point(pch = 19, col = rgb(0.15,0.6,0.96,0.6)) +
@@ -23,7 +20,7 @@ ggplot(average_amyloid,(aes(x = age, y = mean_amyloid))) +
    theme_minimal()
 
 # construct linear model
-model_linear <- lm(average_amyloid$mean_amyloid ~ average_amyloid$age)
+model_linear <- lm(mean_amyloid ~ age, data = average_amyloid)
 summary(model_linear)
 coefficients(model_linear)
 
@@ -57,7 +54,8 @@ print(shpiro_result)
 
 
 # construct logarithmic model
-model_log <- lm((average_amyloid$mean_amyloid) ~ log(average_amyloid$age))
+# model_log <- lm((average_amyloid$mean_amyloid) ~ log(average_amyloid$age))
+model_log <- lm(mean_amyloid ~ log(age), data = average_amyloid)
 summary(model_log)
 # plot prediction
 new_data <- data.frame(age = seq(min(average_amyloid$age), max(average_amyloid$age)))
@@ -89,7 +87,8 @@ print(shpiro_result)
 
 
 # construct polynomial model(2)
-model_poly2 <- lm(average_amyloid$mean_amyloid ~ poly(average_amyloid$age,2))
+# model_poly2 <- lm(average_amyloid$mean_amyloid ~ poly(average_amyloid$age,2))
+model_poly2 <- lm(mean_amyloid ~ poly(age,2), data = average_amyloid)
 summary(model_poly2)
 
 # plot prediction
@@ -161,68 +160,51 @@ print(shpiro_result)
 
 
 ## predict age from 75 to 110
+pre_data <- data.frame(age=seq(75,110,by = 1))
+pre_data$Y <- sample(data_2$Y, nrow(pre_data), replace = TRUE)
 pre_data$amy_linear <- predict(model_linear, newdata=pre_data)
 pre_data$amy_log <- predict(model_log, newdata=pre_data)
 pre_data$amy_poly2 <- predict(model_poly2, newdata=pre_data)
-# 1. 绘制 data_2 数据的散点图 (age 从 55 到 74)
-par(mfrow=c(1,1))
-plot(data_2$age, data_2$DV_amyloid, 
-     main = "DV_amyloid 和模型预测对比图", 
-     xlab = "Age", 
-     ylab = "DV_amyloid", 
-     pch = 19, 
-     col = "darkblue", 
-     xlim = c(55, 110),  # 设置 X 轴范围覆盖两个数据集
-     ylim = c(50,300))
+pre_data$amy_mixed <- predict(model_mixed, newdata=pre_data)
+data_combined <- rbind(
+  data.frame(age = data_2$age, DV_amyloid = data_2$DV_amyloid, model = "Observed"),
+  data.frame(age = pre_data$age, DV_amyloid = pre_data$amy_linear, model = "Linear"),
+  data.frame(age = pre_data$age, DV_amyloid = pre_data$amy_log, model = "Log"),
+  data.frame(age = pre_data$age, DV_amyloid = pre_data$amy_poly2, model = "Polynomial"),
+  data.frame(age = pre_data$age, DV_amyloid = pre_data$amy_mixed, model = "Mixed")
+)
 
-# 2. 添加 pre_data 中线性模型的预测曲线 (age 从 75 到 110)
-lines(pre_data$age, pre_data$amy_linear, col = "red", lwd = 2)
+# 绘制图形
+ggplot(data_combined, aes(x = age, y = DV_amyloid, color = model, shape = model)) +
+  geom_point(size = 1.5) +
+  labs(title = "Prediction of DV Amyloid vs Age", x = "Age", y = "DV Amyloid") +
+  scale_color_manual(values = c("Observed" = rgb(0.15, 0.6, 0.96, 0.6), 
+                                "Linear" = rgb(0.25, 0.8, 0.4, 0.6), 
+                                "Log" = rgb(0.55, 0.25, 0.8, 0.6), 
+                                "Polynomial" = rgb(0.9, 0.7, 0.1, 0.6), 
+                                "Mixed" = rgb(0.9, 0.15, 0.15, 0.6))) +
+  theme_minimal()
 
-# 3. 添加 pre_data 中对数模型的预测曲线
-lines(pre_data$age, pre_data$amy_log, col = "blue", lwd = 2)
 
-# 4. 添加 pre_data 中二次多项式模型的预测曲线
-lines(pre_data$age, pre_data$amy_poly2, col = "green", lwd = 2)
-
-# 5. 添加图例
-legend("topleft", legend = c("原始数据", "线性模型", "对数模型", "二次多项式模型"), 
-       col = c("darkblue", "red", "blue", "green"), 
-       pch = c(19, NA, NA, NA), 
-       lwd = c(NA, 2, 2, 2))
 
 # Task3
+# 读取数据
 data_3 <- read.csv("data_task3.csv")
-data_3$Y <- sample(data_2$Y, nrow(data_3), replace = TRUE)
-data_3$preamy_lin <- predict(model_linear, newdata = data_3)
-data_3$preamy_log <- predict(model_log, newdata = data_3)
-data_3$preamy_poly2 <- predict(model_poly2, newdata = data_3)
-# 生成 scatter plot 和预测点、预测线
-ggplot(data_3, aes(x = age, y = DV_amyloid)) +
-  geom_point(color = "blue", shape =1, size = 3) +  # 绘制原始数据的散点图
-  geom_point(aes(y = preamy_lin), color = "red", shape = 0, size = 3) +  # 绘制预测点
-  geom_line(aes(y = preamy_lin), color = "red", size = 1) +  # 绘制预测线
-  geom_point(aes(y = preamy_log), color = "red", shape = 1, size = 3) +  # 绘制预测点
-  geom_line(aes(y = preamy_log), color = "red", size = 1) +  # 绘制预测线
-  geom_point(aes(y = preamy_poly2), color = "red", shape = 2, size = 3) +  # 绘制预测点
-  geom_line(aes(y = preamy_poly2), color = "red", size = 1) +  # 绘制预测线
-  labs(title = "DV Amyloid vs Age with Prediction", 
-       x = "Age", 
-       y = "DV Amyloid") +
-  theme_minimal()
-# 添加图例
-legend("topleft", legend = c("原始数据", "线性模型", "对数模型", "二次多项式模型"), 
-       col = c("darkblue", "red", "blue", "green"), 
-       pch = c(19, NA, NA, NA), 
-       
-       lwd = c(NA, 2, 2, 2))
+data_3$model <- "Ground Truth"
+pre_data <- subset(data_combined, model != "Observed")
 
-# draw the comparison plot between the original data and the predicted data
+# 绘制散点图
 ggplot() +
-  geom_point(data=data_3, aes(x = age, y = DV_amyloid),color = "red", shape = 9, size = 2) +  # predict data
-  geom_point(data=data_2, aes(x=age, y = DV_amyloid), color = "blue", shape = 1, size = 2) +  # original data
-  labs(title = "DV Amyloid vs Age with Prediction", 
-       x = "Age", 
-       y = "DV Amyloid") +
+  geom_point(data = pre_data, aes(x = age, y = DV_amyloid, color = model, shape = model), size = 1.5) +
+  geom_point(data = data_3, aes(x = age, y = DV_amyloid, color = model), size = 2) +  # 将颜色映射到 "Ground Truth"
+  labs(title = "Prediction of DV Amyloid vs Age", x = "Age", y = "DV Amyloid") +
+  scale_color_manual(values = c("Linear" = rgb(0.25, 0.8, 0.4, 0.6), 
+                                "Log" = rgb(0.55, 0.25, 0.8, 0.6), 
+                                "Polynomial" = rgb(0.9, 0.7, 0.1, 0.6), 
+                                "Mixed" = rgb(0.9, 0.15, 0.15, 0.6),
+                                "Ground Truth" = rgb(0.15, 0.6, 0.96, 0.6))) +
   theme_minimal()
+
 
 # improve:
+
