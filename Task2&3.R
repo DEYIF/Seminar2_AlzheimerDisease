@@ -22,7 +22,7 @@ ggplot(average_amyloid,(aes(x = age, y = mean_amyloid))) +
    labs(title = "mean DV Amyloid vs Age", x = "Age", y = "mean DV Amyloid") +
    theme_minimal()
 
-# construct Linear Model
+# construct linear model
 model_linear <- lm(average_amyloid$mean_amyloid ~ average_amyloid$age)
 summary(model_linear)
 coefficients(model_linear)
@@ -74,18 +74,17 @@ ggplot() +
 ggplot(average_amyloid, aes(x = fitted(model_log), y = residuals(model_log))) +
   geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
+  labs(title = "logarithmic model Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
   theme_minimal()
 # 正态 Q-Q 图
 ggplot(data.frame(residuals = residuals(model_log)), aes(sample = residuals)) +
   stat_qq() +
   stat_qq_line(color = "red", size = 1.2) +
-  labs(title = "Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
+  labs(title = "logarithmic model Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
   theme_minimal()
 # Shapiro-Wilk test
 shpiro_result <- shapiro.test(residuals(model_log))
 print(shpiro_result)
-# 绘制原始数据的散点图
 
 
 
@@ -107,13 +106,13 @@ dev.off()
 ggplot(average_amyloid, aes(x = fitted(model_poly2), y = residuals(model_poly2))) +
   geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
+  labs(title = "polynomial model(2) Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
   theme_minimal()
 # 正态 Q-Q 图
 ggplot(data.frame(residuals = residuals(model_poly2)), aes(sample = residuals)) +
   stat_qq() +
   stat_qq_line(color = "red", size = 1.2) +
-  labs(title = "Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
+  labs(title = "polynomial model(2) Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
   theme_minimal()
 # Shapiro-Wilk test
 shpiro_result <- shapiro.test(residuals(model_poly2))
@@ -129,33 +128,34 @@ model_mixed <- lmer(DV_amyloid ~ age + (1|Y), data = data_2)
 summary(model_mixed)
 
 # plot prediction
-
-# plot prediction
-new_data <- data.frame(age = seq(min(average_amyloid$age), max(average_amyloid$age)))
 set.seed(123)  # 为了可重复性，设置随机种子
-new_data$Y <- sample(data_2$Y, length(reg_data[1]), replace = TRUE)  # 随机选择 20 个值，允许重复
+new_data$Y <- sample(data_2$Y,20,replace = TRUE)  # 随机选择 20 个值，允许重复
 new_data$predicted_mix_Amyloid <- predict(model_mixed, newdata = new_data)
 
 ggplot() +
   geom_point(data = data_2, aes(x= age, y=DV_amyloid), color = rgb(0.15, 0.6, 0.96, 0.6), size = 2) +  # 绘制散点
-  geom_line(data = new_data,aes(x = age, y = predict(model_poly2)), color = "red", size = 1.2) +  # 添加线性回归直线
+  geom_line(data = new_data,aes(x = age, y=predicted_mix_Amyloid), color = "red", size = 1.2) +  # 添加线性回归直线
   labs(title = "mixed effect Fit vs. Age", 
        x = "Age", 
        y = "Mean DV Amyloid") +
   theme_minimal()
-
+dev.off()
+# 残差 vs 拟合值
+res <- average_amyloid$mean_amyloid - new_data$predicted_mix_Amyloid
+ggplot(average_amyloid, aes(x = new_data$predicted_mix_Amyloid, y = res)) +
+  geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "mixed-effect model Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
 # 正态 Q-Q 图
-ggplot(data.frame(residuals = residuals(model_log)), aes(sample = residuals)) +
+ggplot(data.frame(residual = res), aes(sample = residual)) +
   stat_qq() +
   stat_qq_line(color = "red", size = 1.2) +
-  labs(title = "Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
+  labs(title = "mixed effect model Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
   theme_minimal()
 # Shapiro-Wilk test
-shpiro_result <- shapiro.test(residuals(model_log))
+shpiro_result <- shapiro.test(residuals(model_mixed))
 print(shpiro_result)
-# 绘制原始数据的散点图
-
-lines(average_amyloid$age, reg_data$mix_amyloid,col="blue",lwd = 2)
 
 
 
