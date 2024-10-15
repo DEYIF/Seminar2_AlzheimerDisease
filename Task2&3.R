@@ -8,153 +8,129 @@ ggplot(data_2, aes(x = age, y = DV_amyloid)) +
   geom_point(pch = 19, col = rgb(0.15,0.6,0.96,0.6)) +
   labs(title = "DV Amyloid vs Age", x = "Age", y = "DV Amyloid") +
   theme_minimal()
-#mean value plot (group by age)
-average_amyloid <- data_2 %>%
-  group_by(age) %>%
-  summarize(mean_amyloid = mean(DV_amyloid, na.rm = TRUE))
-# 查看结果
-ggplot(average_amyloid,(aes(x = age, y = mean_amyloid))) +
-   geom_point(pch = 19, col = rgb(0.15,0.6,0.96,0.6)) +
-   labs(title = "mean DV Amyloid vs Age", x = "Age", y = "mean DV Amyloid") +
-   theme_minimal()
 
-# construct linear model
-model_linear <- lm(mean_amyloid ~ age, data = average_amyloid)
+## construct linear model
+model_linear <- lm(DV_amyloid ~ age, data = data_2)
 summary(model_linear)
 coefficients(model_linear)
+minAge= min(data_2$age)
+maxAge= max(data_2$age)
+new_data <- data.frame(age = seq(minAge, maxAge, by = 1)) # Create regression data
+new_data$predicted_linear_Amyloid <- predict(model_linear, newdata = new_data)
 
-# plot prediction
-ggplot(data_2, aes(x = age, y = DV_amyloid)) +
-  geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 2) +  # 绘制散点
-  geom_smooth(method = "lm", color = "red", se = FALSE, size = 1) +  # 添加线性回归直线
-  labs(title = "regression line & original data", x = "Age", y = "DV Amyloid") +
-  theme_minimal()
-ggplot(average_amyloid, aes(x = age, y = mean_amyloid)) +
-  geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 2) +  # 绘制散点
-  geom_smooth(method = "lm", color = "red", se = FALSE, size = 1) +  # 添加线性回归直线
-  labs(title = "regression line & mean data", x = "Age", y = "Mean DV Amyloid") +
+# plot regression
+ggplot() +
+  geom_point(data = data_2, aes(x= age, y=DV_amyloid), color = rgb(0.15, 0.6, 0.96, 0.6), size = 2) +  # 绘制散点
+  geom_line(data = new_data,aes(x = age, y = predicted_linear_Amyloid), color = "red", size = 1.2) +  # 添加线性回归直线
+  labs(title = "Linear Fit vs. Age", 
+       x = "Age", 
+       y = "DV Amyloid") +
   theme_minimal()
 
-# 残差 vs 拟合值
-ggplot(average_amyloid, aes(x = fitted(model_linear), y = residuals(model_linear))) +
+# residual vs fitted
+merged_data <- merge(data_2, new_data, by = "age")  # find the corresponding predicted value
+merged_data$residual_linear <- merged_data$DV_amyloid - merged_data$predicted_linear_Amyloid
+
+ggplot(merged_data, aes(x = predicted_linear_Amyloid, y = residual_linear)) +
   geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
+  labs(title = "Linear model Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
   theme_minimal()
-# 正态 Q-Q 图
-ggplot(data.frame(residuals = residuals(model_linear)), aes(sample = residuals)) +
-  stat_qq() +
-  stat_qq_line(color = "red", size = 1.2) +
-  labs(title = "Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
+
+# Q-Q Plot
+ggplot(merged_data, aes(sample = residual_linear)) +
+  stat_qq(alpha = 0.5, pch = 19, col = rgb(0.15,0.6,0.96,0.6), size = 2) +
+  stat_qq_line(color = "red", size = 1) +
+  labs(title = "linear model Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
   theme_minimal()
+
 # Shapiro-Wilk test
-shpiro_result <- shapiro.test(residuals(model_linear))
+shpiro_result <- shapiro.test(merged_data$residual_linear)
 print(shpiro_result)
 
 
-# construct logarithmic model
-# model_log <- lm((average_amyloid$mean_amyloid) ~ log(average_amyloid$age))
-model_log <- lm(mean_amyloid ~ log(age), data = average_amyloid)
+## construct logarithmic model
+model_log <- lm(DV_amyloid ~ log(age), data = data_2)
 summary(model_log)
-# plot prediction
-new_data <- data.frame(age = seq(min(average_amyloid$age), max(average_amyloid$age)))
+
+# plot regression
 new_data$predicted_log_Amyloid <- predict(model_log, newdata = new_data)
+temp <- merge(data_2, new_data, by = "age")  # find the corresponding predicted value
+merged_data$predicted_log_Amyloid <- temp$predicted_log_Amyloid
+merged_data$residual_log <- merged_data$DV_amyloid - merged_data$predicted_log_Amyloid
+
 ggplot() +
   geom_point(data = data_2, aes(x= age, y=DV_amyloid), color = rgb(0.15, 0.6, 0.96, 0.6), size = 2) +  # 绘制散点
   geom_line(data = new_data,aes(x = age, y = predicted_log_Amyloid), color = "red", size = 1.2) +  # 添加线性回归直线
   labs(title = "Logarithmic Fit vs. Age", 
        x = "Age", 
-       y = "Mean DV Amyloid") +
+       y = "DV Amyloid") +
   theme_minimal()
 
-# 残差 vs 拟合值
-ggplot(average_amyloid, aes(x = fitted(model_log), y = residuals(model_log))) +
+
+# Q-Q Plot
+ggplot(merged_data, aes(sample = residual_linear)) +
+  stat_qq(alpha = 0.5, pch = 19, col = rgb(0.15,0.6,0.96,0.6), size = 2) +
+  stat_qq_line(color = "red", size = 1) +
+  ggtitle("QQ Plot of Residuals") +
+  theme_minimal()
+
+# residual vs fitted
+ggplot(merged_data, aes(x = predicted_linear_Amyloid, y = residual_log)) +
   geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
   labs(title = "logarithmic model Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
   theme_minimal()
-# 正态 Q-Q 图
-ggplot(data.frame(residuals = residuals(model_log)), aes(sample = residuals)) +
-  stat_qq() +
-  stat_qq_line(color = "red", size = 1.2) +
+
+# Q-Q plot
+ggplot(merged_data, aes(sample = residual_log)) +
+  stat_qq(alpha = 0.5, pch = 19, col = rgb(0.15,0.6,0.96,0.6), size = 2) +
+  stat_qq_line(color = "red", size = 1) +
   labs(title = "logarithmic model Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
   theme_minimal()
+
 # Shapiro-Wilk test
-shpiro_result <- shapiro.test(residuals(model_log))
+shpiro_result <- shapiro.test(merged_data$residual_log)
 print(shpiro_result)
 
 
 
-# construct polynomial model(2)
-# model_poly2 <- lm(average_amyloid$mean_amyloid ~ poly(average_amyloid$age,2))
-model_poly2 <- lm(mean_amyloid ~ poly(age,2), data = average_amyloid)
+## construct polynomial model(2)
+model_poly2 <- lm(DV_amyloid ~ poly(age,2), data = data_2)
 summary(model_poly2)
 
-# plot prediction
+# plot regression
 new_data$predicted_poly2_Amyloid <- predict(model_poly2, newdata = new_data)
+temp <- merge(data_2, new_data, by = "age")  # find the corresponding predicted value
+merged_data$predicted_poly2_Amyloid <- temp$predicted_poly2_Amyloid
+merged_data$residual_poly2 <- merged_data$DV_amyloid - merged_data$predicted_poly2_Amyloid
+
 ggplot() +
   geom_point(data = data_2, aes(x= age, y=DV_amyloid), color = rgb(0.15, 0.6, 0.96, 0.6), size = 2) +  # 绘制散点
   geom_line(data = new_data,aes(x = age, y = predicted_poly2_Amyloid), color = "red", size = 1.2) +  # 添加线性回归直线
   labs(title = "polynomial2 Fit vs. Age", 
        x = "Age", 
-       y = "Mean DV Amyloid") +
+       y = "DV Amyloid") +
   theme_minimal()
-dev.off()
-# 残差 vs 拟合值
-ggplot(average_amyloid, aes(x = fitted(model_poly2), y = residuals(model_poly2))) +
+
+# residual vs fitted
+ggplot(merged_data, aes(x = predicted_poly2_Amyloid, y = residual_poly2)) +
   geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "polynomial model(2) Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
+  labs(title = "polynomial2 model Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
   theme_minimal()
-# 正态 Q-Q 图
-ggplot(data.frame(residuals = residuals(model_poly2)), aes(sample = residuals)) +
-  stat_qq() +
-  stat_qq_line(color = "red", size = 1.2) +
-  labs(title = "polynomial model(2) Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
+
+# Q-Q plot
+ggplot(merged_data, aes(sample = residual_poly2)) +
+  stat_qq(alpha = 0.5, pch = 19, col = rgb(0.15,0.6,0.96,0.6), size = 2) +
+  stat_qq_line(color = "red", size = 1) +
+  labs(title = "polynomial2 model Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
   theme_minimal()
+
+
 # Shapiro-Wilk test
-shpiro_result <- shapiro.test(residuals(model_poly2))
+shpiro_result <- shapiro.test(merged_data$residual_poly2)
 print(shpiro_result)
-
-
-# construct mixed-effect model
-# 创建新的分组变量 Y
-data_2$Y <- floor(data_2$X / 17)
-# 使用lmer函数构建模型，age为固定效应，Y为随机效应
-model_mixed <- lmer(DV_amyloid ~ age + (1|Y), data = data_2)
-# 输出模型摘要，查看固定效应和随机效应的结果
-summary(model_mixed)
-
-# plot prediction
-set.seed(123)  # 为了可重复性，设置随机种子
-new_data$Y <- sample(data_2$Y,20,replace = TRUE)  # 随机选择 20 个值，允许重复
-new_data$predicted_mix_Amyloid <- predict(model_mixed, newdata = new_data)
-
-ggplot() +
-  geom_point(data = data_2, aes(x= age, y=DV_amyloid), color = rgb(0.15, 0.6, 0.96, 0.6), size = 2) +  # 绘制散点
-  geom_line(data = new_data,aes(x = age, y=predicted_mix_Amyloid), color = "red", size = 1.2) +  # 添加线性回归直线
-  labs(title = "mixed effect Fit vs. Age", 
-       x = "Age", 
-       y = "Mean DV Amyloid") +
-  theme_minimal()
-dev.off()
-# 残差 vs 拟合值
-res <- average_amyloid$mean_amyloid - new_data$predicted_mix_Amyloid
-ggplot(average_amyloid, aes(x = new_data$predicted_mix_Amyloid, y = res)) +
-  geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "mixed-effect model Residuals vs Fitted", x = "Fitted Values", y = "Residuals") +
-  theme_minimal()
-# 正态 Q-Q 图
-ggplot(data.frame(residual = res), aes(sample = residual)) +
-  stat_qq() +
-  stat_qq_line(color = "red", size = 1.2) +
-  labs(title = "mixed effect model Normal Q-Q", x = "Theoretical Quantiles", y = "Standardized Residuals") +
-  theme_minimal()
-# Shapiro-Wilk test
-shpiro_result <- shapiro.test(residuals(model_mixed))
-print(shpiro_result)
-
 
 
 
