@@ -67,14 +67,6 @@ ggplot() +
        y = "DV Amyloid") +
   theme_minimal()
 
-
-# Q-Q Plot
-ggplot(merged_data, aes(sample = residual_linear)) +
-  stat_qq(alpha = 0.5, pch = 19, col = rgb(0.15,0.6,0.96,0.6), size = 2) +
-  stat_qq_line(color = "red", size = 1) +
-  ggtitle("QQ Plot of Residuals") +
-  theme_minimal()
-
 # residual vs fitted
 ggplot(merged_data, aes(x = predicted_linear_Amyloid, y = residual_log)) +
   geom_point(color = rgb(0.15, 0.6, 0.96, 0.6), size = 3) +
@@ -189,10 +181,10 @@ ggplot() +
   geom_point(data = pre_data_label, aes(x = age, y = DV_amyloid, color = model, shape = model), size = 2) +
   geom_point(data = data_3, aes(x = age, y = DV_amyloid, color = model, shape = model), size = 2) +  # 将颜色映射到 "Ground Truth"
   labs(title = "Prediction of DV Amyloid vs Age", x = "Age", y = "DV Amyloid") +
-  scale_color_manual(values = c("Linear" = rgb(0.25, 0.8, 0.4, 0.6), 
-                                "Log" = rgb(0.55, 0.25, 0.8, 0.6), 
-                                "Polynomial2" = rgb(0.9, 0.7, 0.1, 0.6), 
-                                "Ground Truth" = rgb(0.15, 0.6, 0.96, 0.6))) +
+  scale_color_manual(values = c("Linear" = rgb(0.25, 0.8, 0.4), 
+                                "Log" = rgb(0.55, 0.25, 0.8), 
+                                "Polynomial2" = rgb(0.9, 0.7, 0.1), 
+                                "Ground Truth" = rgb(0.15, 0.6, 0.96))) +
   scale_shape_manual(values = c("Ground Truth" = 16,  # 圆形
                                 "Linear" = 17,   # 三角形
                                 "Log" = 15,      # 方形
@@ -251,10 +243,10 @@ ggplot() +
   labs(title = "Polynomial 3 Fit vs. Age", 
        x = "Age", 
        y = "Mean DV Amyloid") +
-  scale_color_manual(values = c("Linear" = rgb(0.25, 0.8, 0.4, 0.6), 
-                                "Log" = rgb(0.55, 0.25, 0.8, 0.6), 
-                                "Polynomial2" = rgb(0.9, 0.7, 0.1, 0.6), 
-                                "Ground Truth" = rgb(0.15, 0.6, 0.96, 0.6),
+  scale_color_manual(values = c("Linear" = rgb(0.25, 0.8, 0.4,), 
+                                "Log" = rgb(0.55, 0.25, 0.8), 
+                                "Polynomial2" = rgb(0.9, 0.7, 0.1), 
+                                "Ground Truth" = rgb(0.15, 0.6, 0.96),
                                 "Polynomial3" = "red")) +
   scale_shape_manual(values = c("Ground Truth" = 16,  # 圆形
                                 "Linear" = 17,   # 三角形
@@ -269,4 +261,5 @@ eval_data <- merge(eval_data, temp, by = "age")
 eval_data$poly3_residual <- eval_data$DV_amyloid - eval_data$amy_poly3
 MSE_poly3 <- mean(eval_data$poly3_residual^2)
 summary(model_poly3)
+
 
