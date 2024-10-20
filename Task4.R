@@ -10,13 +10,6 @@ data <- read.csv("data_task4.csv")
 # Remove unnecessary index column
 data <- data[, -1]
 
-# Summary statistics for each group
-summary_stats <- data %>%
-  group_by(GROUP) %>%
-  summarise(Mean_AB = mean(AMYLOIDB), SD_AB = sd(AMYLOIDB), 
-            Min_AB = min(AMYLOIDB), Max_AB = max(AMYLOIDB))
-
-print(summary_stats)
 
 # 1. 正态性检验
 # 使用 Shapiro-Wilk 检验每个组的正态性
@@ -35,65 +28,55 @@ ggplot(data, aes(sample = AMYLOIDB, color = GROUP)) +
   facet_wrap(~GROUP) +
   theme_minimal()
 
-# 对 AMYLOIDB 数据进行对数变换
-data$log_AMYLOIDB <- log(data$AMYLOIDB)
-data$root_AMYLOIDB <- sqrt(data$AMYLOIDB)
+# 移除data中的control group 中AmyloidVB值最高的两行数据
+data <- data %>%
+  filter(!(GROUP == "control" & AMYLOIDB %in% tail(sort(AMYLOIDB), 2)))
 
-# 对数变换后的正态性检验
-shapiro_test_log_control <- shapiro.test(data$log_AMYLOIDB[data$GROUP == "control"])
-shapiro_test_log_gene_exp1 <- shapiro.test(data$log_AMYLOIDB[data$GROUP == "gene_exp1"])
-shapiro_test_log_gene_exp2 <- shapiro.test(data$log_AMYLOIDB[data$GROUP == "gene_exp2"])
+#再次分析正态性
+shapiro_test_control <- shapiro.test(data$AMYLOIDB[data$GROUP == "control"])
+shapiro_test_gene_exp1 <- shapiro.test(data$AMYLOIDB[data$GROUP == "gene_exp1"])
+shapiro_test_gene_exp2 <- shapiro.test(data$AMYLOIDB[data$GROUP == "gene_exp2"])
 
-print(shapiro_test_log_control)
-print(shapiro_test_log_gene_exp1)
-print(shapiro_test_log_gene_exp2)
+print(shapiro_test_control)
+print(shapiro_test_gene_exp1)
+print(shapiro_test_gene_exp2)
 
-ggplot(data, aes(sample = log_AMYLOIDB, color = GROUP)) +
+#QQ plot
+ggplot(data, aes(sample = AMYLOIDB, color = GROUP)) +
   stat_qq() +
   stat_qq_line() +
   facet_wrap(~GROUP) +
   theme_minimal()
 
-# 平方根变换后的正态性检验
-shapiro_test_log_control <- shapiro.test(data$root_AMYLOIDB[data$GROUP == "control"])
-shapiro_test_log_gene_exp1 <- shapiro.test(data$root_AMYLOIDB[data$GROUP == "gene_exp1"])
-shapiro_test_log_gene_exp2 <- shapiro.test(data$root_AMYLOIDB[data$GROUP == "gene_exp2"])
+# 正态性不满足，使用Wilcoxon秩和检验
+wilcox_test1 <- wilcox.test(AMYLOIDB ~ GROUP, data = data, subset = GROUP %in% c("control", "gene_exp1"))
+print(wilcox_test1)
 
-print(shapiro_test_log_control)
-print(shapiro_test_log_gene_exp1)
-print(shapiro_test_log_gene_exp2)
+wilcox_test2 <- wilcox.test(AMYLOIDB ~ GROUP, data = data, subset = GROUP %in% c("control", "gene_exp2"))
+print(wilcox_test2)
 
-ggplot(data, aes(sample = root_AMYLOIDB, color = GROUP)) +
-  stat_qq() +
-  stat_qq_line() +
-  facet_wrap(~GROUP) +
-  theme_minimal()
+wilcox_test3 <- wilcox.test(AMYLOIDB ~ GROUP, data = data, subset = GROUP %in% c("gene_exp1", "gene_exp2"))
+print(wilcox_test3)
 
-# 2. 方差齐性检验
-# 使用 Levene's Test 检查方差齐性
-levene_test <- leveneTest(root_AMYLOIDB ~ GROUP, data = data)
-print(levene_test)
 
-# 如果正态性或方差齐性不满足，可以考虑数据变换（如对数变换）或者使用非参数检验。
-
-# Perform ANOVA
-anova_result <- aov(root_AMYLOIDB ~ GROUP, data = data)
-summary(anova_result)
-
-# Post-hoc pairwise comparison using Tukey's HSD
-posthoc_result <- TukeyHSD(anova_result)
-print(posthoc_result)
-
-# Linear regression to check the effects of Age and Years Since Diagnosis
-lm_model <- lm(AMYLOIDB ~ AGE + DIAGNOSIS_YRS, data = data)
-summary(lm_model)
-
-# Visualize Amyloid Beta distribution by group
-ggplot(data, aes(x = GROUP, y = AMYLOIDB, fill = GROUP)) +
-  geom_boxplot() +
+# 以age为自变量，amyloidb为因变量，查看散点图
+ggplot(data, aes(x = AGE, y = AMYLOIDB, color = GROUP)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
   theme_minimal() +
-  labs(title = "Amyloid Beta Levels by Gene Expression Group", 
-       x = "Gene Expression Group", y = "Amyloid Beta (pg/mL)")
+  labs(title = "Scatterplot of Amyloid Beta Levels by Age and Gene Expression Group", 
+       x = "Age", y = "Amyloid Beta (pg/mL)")
 
-# Pairwise comparison plots
-plot(posthoc_result)
+# 以diagnosis_yrs为自变量，amyloidb为因变量，查看散点图
+ggplot(data, aes(x = DIAGNOSIS_YRS, y = AMYLOIDB, color = GROUP)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  theme_minimal() +
+  labs(title = "Scatterplot of Amyloid Beta Levels by Years Since Diagnosis and Gene Expression Group", 
+       x = "Years Since Diagnosis", y = "Amyloid Beta (pg/mL)")
+
+
+
+# 运行两因素 ANOVA，Group 和 Age 作为因素
+anova_result <- aov(AMYLOIDB ~ GROUP * AGE * DIAGNOSIS_YRS, data = data)
+summary(anova_result)
